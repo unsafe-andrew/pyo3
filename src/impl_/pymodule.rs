@@ -96,32 +96,7 @@ impl ModuleDef {
     /// Builds a module using user given initializer. Used for [`#[pymodule]`][crate::pymodule].
     #[cfg_attr(any(Py_LIMITED_API, not(Py_GIL_DISABLED)), allow(unused_variables))]
     pub fn make_module(&'static self, py: Python<'_>, gil_used: bool) -> PyResult<Py<PyModule>> {
-        // Check the interpreter ID has not changed, since we currently have no way to guarantee
-        // that static data is not reused across interpreters.
-        //
-        // PyPy does not have subinterpreters, so no need to check interpreter ID.
-        #[cfg(not(any(PyPy, GraalPy)))]
-        {
-            // PyInterpreterState_Get is only available on 3.9 and later, but is missing
-            // from python3.dll for Windows stable API on 3.9
-            #[cfg(all(Py_3_9, not(all(windows, Py_LIMITED_API, not(Py_3_10)))))]
-            {
-                let current_interpreter =
-                    unsafe { ffi::PyInterpreterState_GetID(ffi::PyInterpreterState_Get()) };
-                crate::err::error_on_minusone(py, current_interpreter)?;
-                if let Err(initialized_interpreter) = self.interpreter.compare_exchange(
-                    -1,
-                    current_interpreter,
-                    Ordering::SeqCst,
-                    Ordering::SeqCst,
-                ) {
-                    if initialized_interpreter != current_interpreter {
-                        return Err(PyImportError::new_err(
-                            "PyO3 modules do not yet support subinterpreters, see https://github.com/PyO3/pyo3/issues/576",
-                        ));
-                    }
-                }
-            }
+
             #[cfg(not(all(Py_3_9, not(all(windows, Py_LIMITED_API, not(Py_3_10))))))]
             {
                 // CPython before 3.9 does not have APIs to check the interpreter ID, so best that can be
