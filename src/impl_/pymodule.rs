@@ -96,15 +96,14 @@ impl ModuleDef {
     /// Builds a module using user given initializer. Used for [`#[pymodule]`][crate::pymodule].
     #[cfg_attr(any(Py_LIMITED_API, not(Py_GIL_DISABLED)), allow(unused_variables))]
     pub fn make_module(&'static self, py: Python<'_>, gil_used: bool) -> PyResult<Py<PyModule>> {
-            #[cfg(not(all(Py_3_9, not(all(windows, Py_LIMITED_API, not(Py_3_10))))))]
-            {
-                // CPython before 3.9 does not have APIs to check the interpreter ID, so best that can be
-                // done to guard against subinterpreters is fail if the module is initialized twice
-                if self.module.get(py).is_some() {
-                    return Err(PyImportError::new_err(
-                        "PyO3 modules compiled for CPython 3.8 or older may only be initialized once per interpreter process"
-                    ));
-                }
+        #[cfg(not(all(Py_3_9, not(all(windows, Py_LIMITED_API, not(Py_3_10))))))]
+        {
+            // CPython before 3.9 does not have APIs to check the interpreter ID, so best that can be
+            // done to guard against subinterpreters is fail if the module is initialized twice
+            if self.module.get(py).is_some() {
+                return Err(PyImportError::new_err(
+                    "PyO3 modules compiled for CPython 3.8 or older may only be initialized once per interpreter process"
+                ));
             }
         }
         self.module
